@@ -2,20 +2,28 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useRouter } from "next/navigation"
 
-export default function Register() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+export default function UserRegister() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
+    // Address fields
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "United States",
   })
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
@@ -41,6 +49,10 @@ export default function Register() {
       newErrors.email = "Email is invalid"
     }
 
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Phone number is required"
+    }
+
     if (!formData.password) {
       newErrors.password = "Password is required"
     } else if (formData.password.length < 6) {
@@ -57,22 +69,51 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
+    
     if (!validateForm()) {
       return
     }
-
+    
     setIsLoading(true)
-
+    
     try {
-      // In a real application, this would be an API call to register the user
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // Simulate successful registration
-      router.push("/login?registered=true")
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phoneNumber: formData.phoneNumber,
+          role: 'user',
+          address: {
+            street: formData.street,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            country: formData.country
+          }
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed')
+      }
+      
+      // Store token
+      if (data.token) {
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('userId', data.user.id)
+      }
+      
+      router.push("/login")
     } catch (error) {
       console.error("Registration error:", error)
-      setErrors({ form: "Registration failed. Please try again." })
+      setErrors({ form: error.message })
     } finally {
       setIsLoading(false)
     }
@@ -81,86 +122,129 @@ export default function Register() {
   return (
     <div className="container py-8 md:py-12">
       <div className="mx-auto max-w-md">
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-            <CardDescription>Enter your information to create an account</CardDescription>
+            <CardTitle className="text-2xl font-semibold text-center text-primary">Create an account</CardTitle>
+            <CardDescription className="text-center text-muted-foreground">
+              Enter your details to create a pet owner account
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="pet-owner" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="pet-owner">Pet Owner</TabsTrigger>
-                <TabsTrigger value="service-provider">Service Provider</TabsTrigger>
-              </TabsList>
-              <TabsContent value="pet-owner">
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="john@example.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      required
-                    />
-                    {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
-                  </div>
-                  {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Creating account..." : "Create account"}
-                  </Button>
-                </form>
-              </TabsContent>
-              <TabsContent value="service-provider">
-                <div className="space-y-4 mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    If you are a veterinarian, pharmacy, or other pet service provider, please fill out our service
-                    provider application form.
-                  </p>
-                  <Button className="w-full" asChild>
-                    <Link href="/service-provider-application">Apply as Service Provider</Link>
-                  </Button>
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  placeholder="(123) 456-7890"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber}</p>}
+              </div>
+              
+              {/* Address Fields */}
+              <div className="space-y-4">
+                <h3 className="font-medium">Your Address</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="street">Street Address</Label>
+                  <Input
+                    id="street"
+                    name="street"
+                    placeholder="123 Main St"
+                    value={formData.street}
+                    onChange={handleChange}
+                  />
                 </div>
-              </TabsContent>
-            </Tabs>
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    placeholder="New York"
+                    value={formData.city}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      name="state"
+                      placeholder="NY"
+                      value={formData.state}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Input
+                      id="zipCode"
+                      name="zipCode"
+                      placeholder="10001"
+                      value={formData.zipCode}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                />
+                {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+              </div>
+              {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
+              <Button type="submit" className="w-full mt-4" disabled={isLoading}>
+                {isLoading ? "Creating account..." : "Create Account"}
+              </Button>
+            </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-sm text-muted-foreground text-center">
@@ -180,10 +264,15 @@ export default function Register() {
                 Sign in
               </Link>
             </div>
+            <div className="text-sm text-center">
+              Are you a service provider?{" "}
+              <Link href="/serviceproviderregister" className="underline underline-offset-4 hover:text-primary">
+                Register as a service provider
+              </Link>
+            </div>
           </CardFooter>
         </Card>
       </div>
     </div>
   )
 }
-

@@ -1,73 +1,84 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Cat, Dog, Rabbit, Bird, Fish } from "lucide-react"
+import { BookOpen, Cat, Dog, Rabbit, Bird, Fish, ArrowLeft } from "lucide-react"
 
-// Mock data for articles
-const articles = [
-  {
-    id: 1,
-    title: "Essential Vaccinations for Dogs",
-    category: "Dogs",
-    excerpt:
-      "Learn about the core and non-core vaccinations that every dog owner should consider for their pet's health.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "March 15, 2023",
-    readTime: "5 min read",
-  },
-  {
-    id: 2,
-    title: "Feline Nutrition: What Your Cat Really Needs",
-    category: "Cats",
-    excerpt:
-      "Discover the essential nutrients that cats require and how to choose the right food for your feline friend.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "April 2, 2023",
-    readTime: "4 min read",
-  },
-  {
-    id: 3,
-    title: "Signs of Common Pet Illnesses to Watch For",
-    category: "General",
-    excerpt:
-      "Early detection is key to treating pet illnesses. Learn the warning signs that could indicate your pet is unwell.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "May 10, 2023",
-    readTime: "6 min read",
-  },
-  {
-    id: 4,
-    title: "Dental Care for Pets: A Complete Guide",
-    category: "General",
-    excerpt:
-      "Proper dental care is essential for your pet's overall health. Learn how to maintain your pet's oral hygiene.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "June 18, 2023",
-    readTime: "7 min read",
-  },
-  {
-    id: 5,
-    title: "Caring for Senior Pets: Special Considerations",
-    category: "General",
-    excerpt: "As pets age, they require different care. Discover how to keep your senior pet comfortable and healthy.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "July 5, 2023",
-    readTime: "8 min read",
-  },
-  {
-    id: 6,
-    title: "Small Pets: Proper Care for Rabbits and Guinea Pigs",
-    category: "Small Pets",
-    excerpt:
-      "Learn about the specific needs of small pets like rabbits and guinea pigs to ensure they thrive in your care.",
-    image: "/placeholder.svg?height=200&width=300",
-    date: "August 22, 2023",
-    readTime: "5 min read",
-  },
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+
+const CATEGORY_MAP = [
+  { value: "all", label: "All", icon: BookOpen },
+  { value: "Dogs", label: "Dogs", icon: Dog },
+  { value: "Cats", label: "Cats", icon: Cat },
+  { value: "Small Pets", label: "Small Pets", icon: Rabbit },
+  { value: "Birds", label: "Birds", icon: Bird },
+  { value: "Fish", label: "Fish", icon: Fish },
 ]
 
 export default function KnowledgeHub() {
+  const [articles, setArticles] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedArticle, setSelectedArticle] = useState<any | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(`${API_URL}/articles`)
+        if (!res.ok) throw new Error("Failed to fetch articles")
+        const data = await res.json()
+        setArticles(data.data || [])
+      } catch (err: any) {
+        setError(err.message || "Failed to load articles")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchArticles()
+  }, [])
+
+  // Show full article if selected
+  if (selectedArticle) {
+    return (
+      <div className="container py-8 max-w-2xl mx-auto">
+        <Button variant="ghost" className="mb-4 flex items-center gap-2" onClick={() => setSelectedArticle(null)}>
+          <ArrowLeft className="h-4 w-4" /> Back to Articles
+        </Button>
+        <Card className="overflow-hidden">
+          <div className="aspect-video relative">
+            <img
+              src={selectedArticle.image || "/placeholder.svg"}
+              alt={selectedArticle.title}
+              className="object-cover w-full h-full"
+            />
+            <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+              {selectedArticle.category}
+            </div>
+          </div>
+          <CardHeader>
+            <CardTitle>{selectedArticle.title}</CardTitle>
+            <CardDescription>
+              {selectedArticle.date
+                ? new Date(selectedArticle.date).toLocaleDateString()
+                : ""}
+              {selectedArticle.readTime ? ` · ${selectedArticle.readTime}` : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">{selectedArticle.excerpt}</p>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: selectedArticle.content || "" }} />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container py-8">
       <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
@@ -79,140 +90,79 @@ export default function KnowledgeHub() {
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex justify-center mb-6">
           <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-2">
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              <span className="hidden md:inline">All</span>
-            </TabsTrigger>
-            <TabsTrigger value="dogs" className="flex items-center gap-2">
-              <Dog className="h-4 w-4" />
-              <span className="hidden md:inline">Dogs</span>
-            </TabsTrigger>
-            <TabsTrigger value="cats" className="flex items-center gap-2">
-              <Cat className="h-4 w-4" />
-              <span className="hidden md:inline">Cats</span>
-            </TabsTrigger>
-            <TabsTrigger value="small-pets" className="flex items-center gap-2">
-              <Rabbit className="h-4 w-4" />
-              <span className="hidden md:inline">Small Pets</span>
-            </TabsTrigger>
-            <TabsTrigger value="birds" className="flex items-center gap-2">
-              <Bird className="h-4 w-4" />
-              <span className="hidden md:inline">Birds</span>
-            </TabsTrigger>
-            <TabsTrigger value="fish" className="flex items-center gap-2">
-              <Fish className="h-4 w-4" />
-              <span className="hidden md:inline">Fish</span>
-            </TabsTrigger>
+            {CATEGORY_MAP.map(({ value, label, icon: Icon }) => (
+              <TabsTrigger key={value} value={value} className="flex items-center gap-2">
+                <Icon className="h-4 w-4" />
+                <span className="hidden md:inline">{label}</span>
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 
-        <TabsContent value="all">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {articles.map((article) => (
-              <Card key={article.id} className="overflow-hidden">
-                <div className="aspect-video relative">
-                  <img
-                    src={article.image || "/placeholder.svg"}
-                    alt={article.title}
-                    className="object-cover w-full h-full"
-                  />
-                  <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                    {article.category}
-                  </div>
-                </div>
-                <CardHeader>
-                  <CardTitle>{article.title}</CardTitle>
-                  <CardDescription>
-                    {article.date} · {article.readTime}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{article.excerpt}</p>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/knowledge-hub/article/${article.id}`}>Read Article</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="dogs">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {articles
-              .filter((article) => article.category === "Dogs")
-              .map((article) => (
-                <Card key={article.id} className="overflow-hidden">
-                  <div className="aspect-video relative">
-                    <img
-                      src={article.image || "/placeholder.svg"}
-                      alt={article.title}
-                      className="object-cover w-full h-full"
-                    />
-                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                      {article.category}
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle>{article.title}</CardTitle>
-                    <CardDescription>
-                      {article.date} · {article.readTime}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">{article.excerpt}</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link href={`/knowledge-hub/article/${article.id}`}>Read Article</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="cats">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {articles
-              .filter((article) => article.category === "Cats")
-              .map((article) => (
-                <Card key={article.id} className="overflow-hidden">
-                  <div className="aspect-video relative">
-                    <img
-                      src={article.image || "/placeholder.svg"}
-                      alt={article.title}
-                      className="object-cover w-full h-full"
-                    />
-                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                      {article.category}
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle>{article.title}</CardTitle>
-                    <CardDescription>
-                      {article.date} · {article.readTime}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">{article.excerpt}</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link href={`/knowledge-hub/article/${article.id}`}>Read Article</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-          </div>
-        </TabsContent>
-
-        {/* Similar TabsContent for other pet categories */}
+        {CATEGORY_MAP.map(({ value, label }) => (
+          <TabsContent key={value} value={value}>
+            {loading ? (
+              <div className="text-center py-12">Loading articles...</div>
+            ) : error ? (
+              <div className="text-center text-red-500 py-12">{error}</div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {(value === "all"
+                  ? articles
+                  : articles.filter((article) => article.category === label)
+                ).length > 0 ? (
+                  (value === "all"
+                    ? articles
+                    : articles.filter((article) => article.category === label)
+                  ).map((article) => (
+                    <Card key={article._id} className="overflow-hidden">
+                      <div className="aspect-video relative">
+<img
+  src={
+    article.image
+      ? article.image.startsWith("http")
+        ? article.image
+        : `http://localhost:5000/${article.image.replace(/^\/+/, "")}`
+      : "/placeholder.svg"
+  }
+  alt={article.title}
+  className="object-cover w-full h-full"
+/>
+                        <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                          {article.category}
+                        </div>
+                      </div>
+                      <CardHeader>
+                        <CardTitle>{article.title}</CardTitle>
+                        <CardDescription>
+                          {article.date
+                            ? new Date(article.date).toLocaleDateString()
+                            : ""}
+                          {article.readTime ? ` · ${article.readTime}` : ""}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">{article.excerpt}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <Button variant="outline" className="w-full" onClick={() => setSelectedArticle(article)}>
+                          Read Article
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground col-span-full text-center">
+                    No articles found for {label}.
+                  </p>
+                )}
+              </div>
+            )}
+          </TabsContent>
+        ))}
       </Tabs>
 
       <div className="mt-12 text-center">
@@ -227,4 +177,3 @@ export default function KnowledgeHub() {
     </div>
   )
 }
-

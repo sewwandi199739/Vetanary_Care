@@ -1,90 +1,148 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Clock, MapPin, Phone, Star } from "lucide-react"
-
-// Mock data for veterinarians
-const vets = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    specialty: "General Veterinarian",
-    location: "123 Pet Care St, City",
-    rating: 4.8,
-    image: "/placeholder.svg?height=150&width=150",
-    availability: ["Monday", "Tuesday", "Wednesday", "Friday"],
-    phone: "+1 (555) 123-4567",
-    about:
-      "Dr. Sarah Johnson has over 10 years of experience in general veterinary care. She specializes in preventive care and minor surgeries.",
-  },
-  {
-    id: 2,
-    name: "Dr. Michael Rodriguez",
-    specialty: "Veterinary Surgeon",
-    location: "456 Animal Health Ave, City",
-    rating: 4.9,
-    image: "/placeholder.svg?height=150&width=150",
-    availability: ["Monday", "Thursday", "Friday"],
-    phone: "+1 (555) 987-6543",
-    about:
-      "Dr. Michael Rodriguez is a board-certified veterinary surgeon with expertise in orthopedic and soft tissue surgeries.",
-  },
-  {
-    id: 3,
-    name: "Dr. Emily Chen",
-    specialty: "Veterinary Dermatologist",
-    location: "789 Pet Wellness Blvd, City",
-    rating: 4.7,
-    image: "/placeholder.svg?height=150&width=150",
-    availability: ["Tuesday", "Wednesday", "Thursday", "Saturday"],
-    phone: "+1 (555) 456-7890",
-    about:
-      "Dr. Emily Chen specializes in diagnosing and treating skin conditions in pets. She has a particular interest in allergic dermatitis.",
-  },
-  {
-    id: 4,
-    name: "Dr. James Wilson",
-    specialty: "Veterinary Dentist",
-    location: "321 Animal Smile Dr, City",
-    rating: 4.6,
-    image: "/placeholder.svg?height=150&width=150",
-    availability: ["Monday", "Wednesday", "Friday", "Saturday"],
-    phone: "+1 (555) 234-5678",
-    about:
-      "Dr. James Wilson focuses on pet dental health, including cleanings, extractions, and treating oral diseases.",
-  },
-]
+import { Calendar, Clock, MapPin, Phone, Star, Building, Award } from "lucide-react"
+import ReactCalendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 
 export default function FindVet() {
+  const [vets, setVets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [specialty, setSpecialty] = useState("")
   const [selectedVet, setSelectedVet] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedTime, setSelectedTime] = useState("")
 
+  // Mock availability data (would come from backend in a real app)
+  const availabilityMap = {
+    "Monday": ["09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"],
+    "Tuesday": ["09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM"],
+    "Wednesday": ["10:00 AM", "11:00 AM", "01:00 PM", "02:00 PM", "03:00 PM"],
+    "Thursday": ["09:00 AM", "10:00 AM", "11:00 AM", "03:00 PM", "04:00 PM"],
+    "Friday": ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "04:00 PM"],
+  }
+  
+  const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+
+  // Fetch veterinarians on component mount
+useEffect(() => {
+  const fetchVeterinarians = async () => {
+    try {
+      setLoading(true)
+      
+      const response = await fetch('http://localhost:5000/api/veterinarians')
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch veterinarians: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      // Process the data...
+      const vetsWithAdditionalData = data.data.map(vet => ({
+        id: vet._id,
+        name: vet.name,
+        specialty: "General Veterinarian", 
+        location: vet.businessName || "Animal Clinic",
+        rating: (4 + Math.random()).toFixed(1),
+        availability: weekdays
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.floor(Math.random() * 3) + 3),
+        about: `${vet.name} is an experienced veterinarian at ${vet.businessName || "Animal Clinic"}.`,
+        image: `https://via.placeholder.com/300`,
+        phone: vet.phoneNumber || "Not provided",
+        licenseNumber: vet.licenseNumber || "Not provided"
+      }))
+      
+      setVets(vetsWithAdditionalData)
+    } catch (err) {
+      console.error("Error fetching veterinarians:", err)
+      setError("Failed to load veterinarians. Please try again later.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchVeterinarians()
+}, [])
+
   const filteredVets = vets.filter((vet) => {
-    const matchesSearch =
+    const matchesSearch = 
       vet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vet.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSpecialty = specialty === "" || vet.specialty === specialty
-    return matchesSearch && matchesSpecialty
+      (vet.businessName && vet.businessName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (vet.location && vet.location.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    return matchesSearch
   })
 
   const handleVetSelect = (vet) => {
     setSelectedVet(vet)
   }
+const handleBookAppointment = async () => {
+  if (!selectedVet || !selectedDate || !selectedTime) return;
 
-  const handleBookAppointment = () => {
-    alert(`Appointment booked with ${selectedVet.name} on ${selectedDate} at ${selectedTime}`)
-    setSelectedVet(null)
-    setSelectedDate(null)
-    setSelectedTime("")
+  try {
+    const res = await fetch("http://localhost:5000/api/appointments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // If user authentication is needed, add Authorization header here
+      },
+      body: JSON.stringify({
+        vetId: selectedVet.id,
+        vetName: selectedVet.name,
+        vetBusiness: selectedVet.businessName,
+        date: selectedDate,
+        time: selectedTime,
+        // Optionally add user info if logged in
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to book appointment");
+    alert(`Appointment booked with ${selectedVet.name} on ${selectedDate} at ${selectedTime}`);
+    setSelectedVet(null);
+    setSelectedDate(null);
+    setSelectedTime("");
+  } catch (err) {
+    alert("Failed to book appointment. Please try again.");
+  }
+};
+
+  if (loading) {
+    return (
+      <div className="container py-16 flex justify-center items-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-2">Loading</h2>
+          <p className="text-muted-foreground">Fetching veterinarians...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container py-16 flex justify-center items-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -107,21 +165,6 @@ export default function FindVet() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="specialty">Specialty</Label>
-              <Select value={specialty} onValueChange={setSpecialty}>
-                <SelectTrigger id="specialty">
-                  <SelectValue placeholder="All Specialties" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Specialties</SelectItem>
-                  <SelectItem value="General Veterinarian">General Veterinarian</SelectItem>
-                  <SelectItem value="Veterinary Surgeon">Veterinary Surgeon</SelectItem>
-                  <SelectItem value="Veterinary Dermatologist">Veterinary Dermatologist</SelectItem>
-                  <SelectItem value="Veterinary Dentist">Veterinary Dentist</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
@@ -132,7 +175,7 @@ export default function FindVet() {
                 <div className="flex flex-col md:flex-row">
                   <div className="md:w-1/4 p-4 flex justify-center items-center">
                     <img
-                      src={vet.image || "/placeholder.svg"}
+                      src={vet.image || "/api/placeholder/300/300"}
                       alt={vet.name}
                       className="rounded-full w-24 h-24 object-cover"
                     />
@@ -150,12 +193,16 @@ export default function FindVet() {
                     </CardHeader>
                     <CardContent className="p-0 pb-2">
                       <div className="flex items-center text-sm text-muted-foreground mb-2">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {vet.location}
+                        <Building className="h-4 w-4 mr-1" />
+                        {vet.businessName || "Animal Clinic"}
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                        <Award className="h-4 w-4 mr-1" />
+                        License: {vet.licenseNumber}
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground mb-2">
                         <Phone className="h-4 w-4 mr-1" />
-                        {vet.phone}
+                        {vet.phoneNumber}
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Clock className="h-4 w-4 mr-1" />
@@ -182,26 +229,22 @@ export default function FindVet() {
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>Book Appointment with {selectedVet.name}</CardTitle>
-              <CardDescription>{selectedVet.specialty}</CardDescription>
+              <CardDescription>{selectedVet.businessName}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Select Date</Label>
-                <Tabs defaultValue="calendar" className="w-full">
+                <Tabs defaultValue="availability" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
                     <TabsTrigger value="availability">Availability</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="calendar" className="p-4">
-                    <div className="flex justify-center">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        className="rounded-md border"
-                      />
-                    </div>
-                  </TabsContent>
+<TabsContent value="calendar" className="p-4">
+  <div>
+    <label htmlFor="date">Select Date:</label>
+    <input type="date" id="date" name="date" />
+  </div>
+</TabsContent>
                   <TabsContent value="availability" className="p-4">
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">Available days:</p>
@@ -229,13 +272,9 @@ export default function FindVet() {
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="09:00 AM">09:00 AM</SelectItem>
-                    <SelectItem value="10:00 AM">10:00 AM</SelectItem>
-                    <SelectItem value="11:00 AM">11:00 AM</SelectItem>
-                    <SelectItem value="01:00 PM">01:00 PM</SelectItem>
-                    <SelectItem value="02:00 PM">02:00 PM</SelectItem>
-                    <SelectItem value="03:00 PM">03:00 PM</SelectItem>
-                    <SelectItem value="04:00 PM">04:00 PM</SelectItem>
+                    {selectedDate && availabilityMap[selectedDate]?.map(time => (
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -254,4 +293,3 @@ export default function FindVet() {
     </div>
   )
 }
-
