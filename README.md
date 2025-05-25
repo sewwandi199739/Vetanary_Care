@@ -1,3 +1,5 @@
+
+
 # Veterinary Care Web Application
 
 A modern, responsive web application built with **Next.js** to manage and streamline veterinary care services. The app provides functionalities for pet owners and veterinary staff, including appointment booking, pet health records management, and more.
@@ -63,42 +65,46 @@ A modern, responsive web application built with **Next.js** to manage and stream
    ```bash
    git clone https://github.com/yourusername/veterinary-care-app.git
    cd veterinary-care-app
-Install dependencies
+   ```
 
- ```bash
-Copy
-npm install
-# or
-yarn install
-Configure environment variables
-Create a .env.local file in the root directory and add your variables:
+2. Install dependencies  
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-ini
-Copy
-NEXT_PUBLIC_API_URL=your_api_url
-DATABASE_URL=your_database_connection_string
-NEXTAUTH_SECRET=your_nextauth_secret
-Run the development server
+3. Configure environment variables  
+   Create a `.env.local` file in the root directory and add your variables:
+   ```ini
+   NEXT_PUBLIC_API_URL=your_api_url
+   DATABASE_URL=your_database_connection_string
+   NEXTAUTH_SECRET=your_nextauth_secret
+   ```
 
-bash
-Copy
-npm run dev
-# or
-yarn dev
-Open http://localhost:3000 to view the app
+4. Run the development server  
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-Usage
-Register as a pet owner or veterinary staff
+5. Open [http://localhost:3000](http://localhost:3000) to view the app  
 
-Create and manage pet profiles
+---
 
-Book appointments and receive notifications
+## Usage
 
-Veterinary staff can access the dashboard to manage appointments and pet health records
+- Register as a pet owner or veterinary staff  
+- Create and manage pet profiles  
+- Book appointments and receive notifications  
+- Veterinary staff can access the dashboard to manage appointments and pet health records  
 
-Folder Structure
-bash
-Copy
+---
+
+## Folder Structure
+
+```bash
 /components      # Reusable React components  
 /pages           # Next.js pages and API routes  
 /public          # Static assets (images, fonts)  
@@ -106,3 +112,6 @@ Copy
 /utils           # Utility functions and helpers  
 /hooks           # Custom React hooks  
 /middleware      # API middlewares (if any)  
+```
+
+---
