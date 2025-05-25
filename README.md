@@ -65,7 +65,7 @@ A modern, responsive web application built with **Next.js** to manage and stream
    cd veterinary-care-app
 Install dependencies
 
-bash
+ ```bash
 Copy
 npm install
 # or
